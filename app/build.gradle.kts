@@ -37,6 +37,8 @@ android {
 }
 
 dependencies {
+    implementation(project(":routine"))
+    testImplementation(libs.junit)
     implementation(platform(libs.compose.bom))
     implementation(libs.activity.compose)
     implementation(libs.compose.foundation)

@@ -25,3 +25,4 @@ dependencyResolutionManagement {
 rootProject.name = "FocusWear"
 include(":app")
 include(":mobile")
+include(":routine")
