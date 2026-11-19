@@ -64,6 +64,7 @@ internal class WatchRoutine private constructor(private val context: Context) {
     )
     val state = mutableState.asStateFlow()
 
+    // Las alarmas exactas notifican los cambios de etapa aunque la pantalla esté cerrada.
     val exactAlarmsAllowed get() = Build.VERSION.SDK_INT < 31 || alarms.canScheduleExactAlarms()
 
     fun open() {
@@ -78,6 +79,7 @@ internal class WatchRoutine private constructor(private val context: Context) {
         val request = ConfigRequest.decode(item.payload) ?: return
         val key = "received:$sender"
         val previous = ConfigRequest.decode(prefs.getString(key, null))
+        // Ignora solicitudes antiguas y registra las nuevas antes de confirmar su recepción.
         val receipt = request.receiptAfter(previous)
         if (receipt == ConfigReceipt.STALE) return
         val edit = prefs.edit()
@@ -96,6 +98,7 @@ internal class WatchRoutine private constructor(private val context: Context) {
     }
 
     fun start() {
+        // El tiempo monotónico evita que los cambios en el reloj del sistema alteren la sesión.
         val now = SystemClock.elapsedRealtime()
         if (reconcile(now) != null) return
         val config = state.value.nextConfig
@@ -134,6 +137,7 @@ internal class WatchRoutine private constructor(private val context: Context) {
         alarmFired: Boolean = false
     ): Session? {
         val session = state.value.session ?: return null
+        // Tras reiniciar, restaura la sesión pausada porque su fecha límite monotónica ya no sirve.
         if (session.boot != boot) {
             persist(session.afterReboot(boot), rebootPause = !session.paused || state.value.recoveredAfterRestart)
             return state.value.session
@@ -142,7 +146,7 @@ internal class WatchRoutine private constructor(private val context: Context) {
         if (update.boundary != null) {
             val updatedSession = update.session?.checkpoint(now)
             if (persist(updatedSession, update.result)) {
-                // Recovery on open skips old alerts. A delayed alarm plays only the latest boundary.
+                // Al recuperar la app se omiten avisos antiguos; una alarma tardía anuncia solo el último cambio.
                 if (alarmFired || now - update.boundary <= 5_000L) vibrate(update.result != null)
             } else {
                 schedule(now + 5_000L)
@@ -159,6 +163,7 @@ internal class WatchRoutine private constructor(private val context: Context) {
         rearm: Boolean = true,
         rebootPause: Boolean = false
     ): Boolean {
+        // Guarda primero para que la interfaz y las alarmas reflejen un estado persistido.
         val edit = prefs.edit().putString("session", session?.encode())
             .putBoolean("reboot_pause", rebootPause)
         if (result != null) {
@@ -187,6 +192,7 @@ internal class WatchRoutine private constructor(private val context: Context) {
             try {
                 alarms.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, deadline, alarmIntent)
             } catch (_: SecurityException) {
+                // Si Android deniega la alarma exacta, programa una alarma menos precisa.
                 alarms.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, deadline, alarmIntent)
             }
         } else {
@@ -224,7 +230,7 @@ internal class WatchRoutine private constructor(private val context: Context) {
             val now = System.currentTimeMillis()
             val remaining = if (legacy.getBoolean("pausada", false)) legacy.getLong("restantePausa", duration)
             else legacy.getLong("finEtapa", now) - now
-            // The legacy timer did not store a session start date or a monotonic checkpoint.
+            // El temporizador anterior no guardaba la hora de inicio ni un punto de control monotónico.
             val session = Session(
                 id = UUID.randomUUID().toString(), startedAt = now, config = config, boot = boot,
                 setsCompleted = if (rest) set.coerceAtMost(config.sets - 1) else set - 1,

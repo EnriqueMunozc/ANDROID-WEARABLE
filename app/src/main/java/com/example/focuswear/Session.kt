@@ -24,6 +24,7 @@ internal data class Session(
 
     fun checkpoint(now: Long) = copy(checkpointRemaining = remaining(now))
 
+    // Al pausar conserva el tiempo restante; al reanudar calcula una nueva fecha límite.
     fun togglePause(now: Long) = if (paused) copy(deadline = now + checkpointRemaining)
     else checkpoint(now).copy(deadline = null)
 
@@ -34,6 +35,7 @@ internal data class Session(
     fun afterReboot(bootCount: Int) = copy(boot = bootCount, deadline = null)
 
     fun result(now: Long, complete: Boolean = false): SessionResult {
+        // Si se finaliza durante el estudio, suma solo el tiempo transcurrido de esa etapa.
         val partial = if (!complete && phase == Phase.STUDY) config.studyMillis - remaining(now)
         else 0L
         return SessionResult(
@@ -42,6 +44,7 @@ internal data class Session(
         )
     }
 
+    // Procesa todos los cambios de etapa vencidos para que una alarma tardía no alargue la rutina.
     fun advance(now: Long): SessionUpdate {
         var session = this
         var lastBoundary: Long? = null
@@ -52,6 +55,7 @@ internal data class Session(
             if (session.phase == Phase.STUDY) {
                 val completed = session.setsCompleted + 1
                 if (completed == config.sets) {
+                    // La rutina termina al completar el último bloque de estudio, sin otro descanso.
                     return SessionUpdate(null, session.copy(setsCompleted = completed)
                         .result(end, complete = true), end)
                 }
@@ -78,6 +82,7 @@ internal data class Session(
     ).joinToString("|")
 
     companion object {
+        // Valida los datos persistidos antes de restaurar una sesión.
         fun decode(payload: String?): Session? {
             val fields = payload?.split('|', limit = 9) ?: return null
             if (fields.size != 9) return null

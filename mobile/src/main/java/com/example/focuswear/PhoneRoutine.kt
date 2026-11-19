@@ -33,6 +33,7 @@ internal class PhoneRoutine private constructor(context: Context) {
     private val sync = DataSync.from(context)
     private val prefs = sync.preferences
     private val history = ResultHistory(context)
+    // Las consultas de historial van en segundo plano; sus resultados vuelven al hilo principal.
     private val disk = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
     private val mutableState = MutableStateFlow(loadState(context))
@@ -54,6 +55,7 @@ internal class PhoneRoutine private constructor(context: Context) {
     }
 
     fun save(config: RoutineConfig) {
+        // No persiste configuraciones que incumplan los límites del modelo.
         if (!config.isValid) return
         if (prefs.edit().putString("saved_config", config.encode()).commit()) {
             mutableState.value = state.value.copy(saved = config, storageError = false)
@@ -65,6 +67,7 @@ internal class PhoneRoutine private constructor(context: Context) {
     fun send() {
         val current = state.value
         val config = current.saved?.takeIf { it.isValid } ?: return
+        // Reutiliza una solicitud pendiente igual; crea otra si cambió la configuración o ya se recibió.
         val request = current.request?.takeIf { it.config == config && !current.received }
             ?: ConfigRequest(
                 UUID.randomUUID().toString(),
@@ -85,6 +88,7 @@ internal class PhoneRoutine private constructor(context: Context) {
     fun receive(item: IncomingItem) {
         val path = item.uri.path ?: return
         if (path.startsWith(CONFIG_ACK_PREFIX)) {
+            // Confirma únicamente la solicitud que la interfaz todavía muestra como pendiente.
             val request = ConfigRequest.decode(item.payload) ?: return
             val current = state.value
             if (request == current.request && !current.received) {
@@ -96,6 +100,7 @@ internal class PhoneRoutine private constructor(context: Context) {
             }
         } else if (path.startsWith(RESULT_PREFIX)) {
             val result = SessionResult.decode(item.payload) ?: return
+            // Comprueba que la ruta de sincronización corresponda al identificador del resultado.
             if (path != RESULT_PREFIX + result.id) return
             disk.execute {
                 withHistory {
@@ -105,7 +110,7 @@ internal class PhoneRoutine private constructor(context: Context) {
                             val results = (state.value.results + result).sortedByDescending { it.startedAt }
                             mutableState.value = state.value.copy(results = results)
                         }
-                        // Delete the network item only after the local transaction commits.
+                        // Elimina el elemento recibido después de guardar el resultado localmente.
                         sync.consume(item.uri)
                     }
                 }
