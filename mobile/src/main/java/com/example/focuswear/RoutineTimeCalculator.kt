@@ -30,4 +30,22 @@ object RoutineTimeCalculator {
             "$minutosRestantes min"
         }
     }
+
+
+fun formatearComoReloj(minutos: Int): String {
+    require(minutos >= 0) {
+        "Los minutos no pueden ser negativos"
+    }
+
+    val horas = minutos / 60
+    val minutosRestantes = minutos % 60
+
+    return String.format(
+        java.util.Locale.ROOT,
+        "%02d:%02d:00",
+        horas,
+        minutosRestantes
+    )
+}
+
 }
