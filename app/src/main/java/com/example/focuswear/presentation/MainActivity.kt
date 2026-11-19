@@ -170,17 +170,29 @@ private fun FocusWearScreen(routine: WatchRoutine, lifecycle: Lifecycle, request
 @Composable
 private fun BrandHeader() {
     Row(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.Center
     ) {
-        FocusMark(modifier = Modifier.size(22.dp), color = Mint, accent = Sage)
-        Text(
-            text = "FocusWear",
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 15.sp,
-            letterSpacing = 0.2.sp
+        FocusMark(
+            modifier = Modifier.size(28.dp),
+            color = Mint,
+            accent = Sage
         )
+        Column {
+            Text(
+                text = "FocusWear",
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                letterSpacing = 0.5.sp
+            )
+            Text(
+                text = "Enfócate en tus objetivos",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 9.sp
+            )
+        }
     }
 }
 
@@ -237,13 +249,17 @@ private fun ActiveSession(
 
 @Composable
 private fun TimerDial(time: String, progress: Float, accent: Color, paused: Boolean) {
-    Box(modifier = Modifier.size(132.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier.size(145.dp),
+        contentAlignment = Alignment.Center
+    ) {
         Canvas(
             modifier = Modifier.fillMaxSize().semantics {
                 contentDescription = "Progreso de la etapa: ${(progress * 100).toInt()} por ciento"
             }
         ) {
-            val width = 7.dp.toPx()
+            val width = 8.dp.toPx()
+
             drawArc(
                 color = Evergreen,
                 startAngle = -90f,
@@ -251,6 +267,7 @@ private fun TimerDial(time: String, progress: Float, accent: Color, paused: Bool
                 useCenter = false,
                 style = Stroke(width, cap = StrokeCap.Round)
             )
+
             drawArc(
                 color = if (paused) Sage else accent,
                 startAngle = -90f,
@@ -259,19 +276,22 @@ private fun TimerDial(time: String, progress: Float, accent: Color, paused: Bool
                 style = Stroke(width, cap = StrokeCap.Round)
             )
         }
+
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = time,
                 color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 42.sp,
-                lineHeight = 46.sp,
-                fontWeight = FontWeight.Medium,
+                fontSize = 44.sp,
+                lineHeight = 48.sp,
+                fontWeight = FontWeight.Bold,
                 letterSpacing = (-1).sp
             )
+
             Text(
-                text = if (paused) "pausado" else "restante",
+                text = if (paused) "PAUSADO" else "TIEMPO RESTANTE",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 11.sp
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Medium
             )
         }
     }
@@ -337,21 +357,37 @@ private fun IdleSession(
 @Composable
 private fun ResultCard(completed: Boolean, sets: String, distractions: Int) {
     val color = if (completed) Mint else Warning
+
     Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
-            .background(if (completed) Evergreen else MaterialTheme.colorScheme.tertiaryContainer)
-            .padding(14.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(26.dp))
+            .background(
+                if (completed) Evergreen
+                else MaterialTheme.colorScheme.tertiaryContainer
+            )
+            .border(
+                1.dp,
+                color.copy(alpha = 0.35f),
+                RoundedCornerShape(26.dp)
+            )
+            .padding(18.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(5.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            if (completed) "Rutina completada" else "Finalizada antes de tiempo",
+            if (completed) "¡Rutina completada!" else "Rutina finalizada",
             color = color,
-            fontSize = 14.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
-        Text("$sets sets  ·  $distractions distracciones", color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp)
+
+        Text(
+            "$sets sets  ·  $distractions distracciones",
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 12.sp
+        )
     }
 }
 
